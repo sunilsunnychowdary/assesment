@@ -1,0 +1,844 @@
+openapi: '3.0.2'
+info:
+  title: Soundheart Platform API
+  version: '1.0'
+servers:
+  - url: https://api.server.test/v1
+
+# Paths -----------------------------------------------------------------------
+
+paths:
+  /test:
+    get:
+      description: 'simple connectivity test'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /patient:
+    get:
+      tags:
+        - patient
+      description: 'return a list of patient objects'
+      operationId: listPatients
+      parameters:
+        - in: query
+          name: searchString
+          description: pass an optional search string for querying patients
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: sortField
+          description: patient field to sort on
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: sortOrder
+          description: direction of sort
+          required: false
+          schema:
+            enum: 
+            - asc
+            - desc
+        - in: query
+          name: skip
+          description: number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          description: maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50      
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PatientSummary'
+    post:
+      tags:
+        - patient
+      description: 'Add a new patient'
+      responses:
+        '201':
+          description: 'patient created, returns patientId'
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+        '400':
+          description: object invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '409':
+          description: patient already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Patient'
+        description: Patient to add
+        required: true
+
+  /patient/{patientId}:
+  # TODO: add PUT and DELETE
+    get:
+      tags:
+        - patient
+      description: 'Return a single patient'
+      operationId: getPatient
+      parameters:
+        - name: patientId
+          in: path
+          description: ID of patient to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /patient/{patientId}/vitals:
+    get:
+      tags:
+        - vitals
+      description: 'Return patient vitals'
+      operationId: getPatientVitals
+      parameters:
+        - name: patientId
+          in: path
+          description: ID of patient whose vitals to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/SearchString'
+        - $ref: '#/components/parameters/SortField'
+        - $ref: '#/components/parameters/SortOrder'
+        - $ref: '#/components/parameters/SkipCount'
+        - $ref: '#/components/parameters/LimitCount'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vitals'
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags:
+        - vitals
+      description: 'Add a new vital readings'
+      operationId: addPatientVitals
+      responses:
+        '201':
+          description: Vitals added
+        '400':
+          description: object invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              $ref: '#/components/schemas/Vitals'
+        description: Array of vital readings to add
+        required: true
+
+  /patient/{patientId}/vitals/{vitalsId}:
+    get:
+      tags:
+        - vitals
+      description: 'Return a specific vitals reading'
+      operationId: getPatientVitalsReading
+      parameters:
+        - name: patientId
+          in: path
+          description: ID of patient whose vitals to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: vitalsId
+          in: path
+          description: ID of vitals reading to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/SearchString'
+        - $ref: '#/components/parameters/SortField'
+        - $ref: '#/components/parameters/SortOrder'
+        - $ref: '#/components/parameters/SkipCount'
+        - $ref: '#/components/parameters/LimitCount'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vitals'
+        '404':
+          description: Vitals reading not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags:
+        - vitals
+      summary: Deletes a patient's vitals reading
+      operationId: deletePatientVitals
+      parameters:
+        - name: vitalsId
+          in: path
+          description: Vitals id to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid ID supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Vitals reading not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /patient/{patientId}/device:
+    get:
+      tags:
+        - patient
+        - device
+      description: 'Return list of medical devices used by this patient'
+      operationId: getPatientDevices
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                $ref: '#/components/schemas/PatientDevice'
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /patient/{patientId}/device/{deviceId}:
+    get:
+      tags:
+        - patient
+        - device
+      description: 'Return a specific medical devices used by this patient'
+      operationId: getPatientDevice
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientDevice'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+
+  /device:
+    get:
+      tags:
+        - device
+      description: 'Returns all medical device that provides vitals'
+      operationId: getDevices
+      parameters:
+        - $ref: '#/components/parameters/SearchString'
+        - $ref: '#/components/parameters/SortField'
+        - $ref: '#/components/parameters/SortOrder'
+        - $ref: '#/components/parameters/SkipCount'
+        - $ref: '#/components/parameters/LimitCount'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json::
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+    post:
+      tags:
+        - device
+      description: 'Add a new medical device'
+      operationId: addDevice
+      responses:
+        '201':
+          description: Device added
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+        '400':
+          description: Invalid device object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /device/{deviceId}:
+    get:
+      tags:
+        - device
+      description: 'Return a specific medical device'
+      operationId: getDevice
+      parameters:
+        - in: path
+          name: deviceId
+          description: ID of vitals reading to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    put:
+      tags:
+        - device
+      description: 'Return a specific medical device'
+      operationId: updateDevice
+      parameters:
+        - in: path
+          name: deviceId
+          description: ID of vitals reading to return
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid device object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+
+# TODO: define paths and components for appointments, notifications, and documents
+
+# Components ------------------------------------------------------------------
+
+components:
+  schemas:
+    PatientSummary:
+      description: 'light-weight patient object for list displays. derived from patient object'
+      type: object
+      required:
+      - id
+      - firstName
+      - lastName
+      - dateOfBirth
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        prefix:
+          type: string
+          example: Mr.
+        firstName:
+          type: string
+          example: Samuel
+        lastName:
+          type: string
+          example: Adams
+        suffix:
+          type: string
+          example: Jr.
+        dateOfBirth:
+          type: string
+          format: date
+          example: 1986-08-29
+        photo:
+          type: string
+          format: url
+
+    Patient:
+      type: object
+      required:
+      - id
+      - firstName
+      - lastName
+      - dateOfBirth
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        prefix:
+          type: string
+          example: Mr.
+        firstName:
+          type: string
+          example: Samuel
+        lastName:
+          type: string
+          example: Adams
+        suffix:
+          type: string
+          example: Jr.
+        dateOfBirth:
+          type: string
+          format: date
+          example: 1986-08-29
+        gender:
+          enum:
+            - male
+            - female
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        phones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Phone'
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/EMail'
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        linkedDoctors:
+          type: array
+          items:
+            type: string
+            format: uuid
+        photo:
+          type: string
+          format: url
+        isRegistered:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/ObjectStatus'
+        history:
+          $ref: '#/components/schemas/ObjectHistory'
+
+    DoctorSummary:
+      description: 'light-weight patient object for list displays. derived from doctor object'
+      type: object
+      required:
+      - id
+      - firstName
+      - lastName
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        prefix:
+          type: string
+          example: Dr.
+        firstName:
+          type: string
+          example: Benotin
+        lastName:
+          type: string
+          example: Rogers
+        suffix:
+          type: string
+          example: MD
+        photo:
+          type: string
+          format: url
+
+    Doctor:
+      type: object
+      required:
+      - id
+      - firstName
+      - lastName
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        prefix:
+          type: string
+          example: Dr.
+        firstName:
+          type: string
+          example: Benotin
+        lastName:
+          type: string
+          example: Rogers
+        suffix:
+          type: string
+          example: MD
+        dateOfBirth:
+          type: string
+          format: date
+          example: 1986-08-29
+        gender:
+          enum:
+            - male
+            - female
+        address:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        phone:
+          type: array
+          items:
+            $ref: '#/components/schemas/Phone'
+        email:
+          type: array
+          items:
+            $ref: '#/components/schemas/EMail'
+        photo:
+          type: string
+          format: url
+        specialty:
+          type: string
+        summary:
+          type: string
+          format: multiline
+        status:
+          $ref: '#/components/schemas/ObjectStatus'
+        history:
+          $ref: '#/components/schemas/ObjectHistory'
+
+    Vitals:
+      type: object
+      required:
+      - id
+      - timestamp
+      - type
+      - source
+      - details
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        timestamp:
+          description: 'ISO 8601 formatted timestamp in UTC'
+          type: string
+          format: date-time
+          example: 2022-01-21T01:45:06.109Z
+        type:
+          description: type of vitals reading
+          type: string
+          example: BloodPressure
+        source:
+          description: source of the reading
+          type: string
+          example: device name or manual
+        reading:
+          description: display friendly form of the reading
+          type: string
+          example: 120/80 mmHg
+        details:
+          description: vitals reading details
+          type: object
+        history:
+          $ref: '#/components/schemas/ObjectHistory'
+
+    Appointment:
+      type: object
+      description: 'patient appointment with a doctor'
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        patientSummary:
+          type: object
+          $ref: '#/components/schemas/PatientSummary'
+        doctorSummary:
+          type: object
+          $ref: '#/components/schemas/DoctorSummary'
+        date:
+          type: string
+          format: date
+        slotId:
+          type: string
+        slotTime:
+          type: string
+        symptoms:
+          type: string
+          format: multiline
+        history:
+          $ref: '#/components/schemas/ObjectHistory'
+
+    PatientDevice:
+      type: object
+      description: 'a medical device used by a patient'
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        deviceId:
+          description: uuid of device
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        additionalInformation:
+          description: 'Additional information needed to support device integration'
+          type: string
+        history:
+          $ref: '#/components/schemas/ObjectHistory'
+
+    Device:
+      type: object
+      description: 'medical devices supported by our integration'
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        name:
+          type: string
+        manufacturer:
+          type: string
+        integrationUrl:
+          type: string
+          format: url
+        availableReadings:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceReading'
+        history:
+          $ref: '#/components/schemas/ObjectHistory'
+
+    DeviceReading:
+      type: object
+      description: 'vitals reading produced by a medical device'
+      # TODO: finish
+
+    Address:
+      type: object
+      description: 'dependent object of entities that have an address'
+      properties:
+        type:
+          enum:
+          - work
+          - home
+          - billing
+          - mailling
+        street1:
+          type: string
+        street2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+
+    Phone:
+      type: object
+      description: 'dependent object of entities that have a phone'
+      properties:
+        type:
+          enum:
+          - work
+          - home
+          - billing
+          - mailling
+        number:
+          type: string
+
+    EMail:
+      type: object
+      description: 'dependent object of entities that have an email address'
+      properties:
+        type:
+          enum:
+          - main
+          - alternate
+        number:
+          type: string
+          format: email
+
+    ObjectHistory:
+      type: object
+      description: creation and update information
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          example: 2022-01-21T01:45:06.109Z
+        createdBy:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2022-01-21T01:45:06.109Z
+        updatedBy:
+          type: string
+
+    ObjectStatus:
+      description: status an object has in the system
+      enum:
+      - active
+      - inactive
+
+    ApiResponse:
+      type: object
+      description: response message including http status code
+      properties:
+        code:
+          type: integer
+          format: int32
+        type:
+          type: string
+        message:
+          type: string
+
+  parameters:
+    SearchString:
+      in: query
+      name: searchString
+      description: search string for querying patient vitals
+      required: false
+      schema:
+        type: string
+    SortField:
+      in: query
+      name: sortField
+      description: vitals field to sort on
+      required: false
+      schema:
+        type: string
+    SortOrder:
+      in: query
+      name: sortOrder
+      description: direction of sort
+      required: false
+      schema:
+        enum: 
+        - asc
+        - desc
+    SkipCount:
+      in: query
+      name: skip
+      description: number of records to skip for pagination
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+    LimitCount:
+      in: query
+      name: limit
+      description: maximum number of records to return
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 50
